@@ -4,6 +4,7 @@ import com.ProjectManager.util.DateUtils;
 import com.ProjectManager.model.Task;
 import com.ProjectManager.model.TaskStatus;
 import com.ProjectManager.model.Project;
+import com.ProjectManager.model.User;
 import com.ProjectManager.repository.TaskRepository;
 import com.ProjectManager.repository.ProjectRepository;
 import com.ProjectManager.repository.UserRepository;
@@ -175,6 +176,211 @@ public class TaskView {
         return null;
     }
 
+    // NOVO MÉTODO: Seleção inteligente de tarefa
+    private Task selecionarTarefa() {
+        List<Task> tarefas = taskRepo.findAll();
+        if (tarefas.isEmpty()) {
+            ConsoleUtils.mostrarMensagemErro("❌ Nenhuma tarefa cadastrada!");
+            System.out.println("💡 Dica: Primeiro crie uma tarefa");
+            return null;
+        }
+
+        System.out.println("=== TAREFAS DISPONÍVEIS ===");
+        for (int i = 0; i < tarefas.size(); i++) {
+            Task t = tarefas.get(i);
+            
+            // Buscar nome do projeto
+            String nomeProjeto = "Projeto não encontrado";
+            Optional<Project> projeto = projectRepo.findById(t.getProjetoId());
+            if (projeto.isPresent()) {
+                nomeProjeto = projeto.get().getNome();
+            }
+            
+            System.out.printf("%d. %s\n", (i + 1), t.getNome());
+            System.out.printf("   ID: %s | Status: %s\n", 
+                    t.getId().substring(0, 8) + "...", t.getStatus());
+            System.out.printf("   Projeto: %s\n", nomeProjeto);
+            System.out.printf("   Prazo: %s\n", DateUtils.formatarData(t.getPrazo()));
+            
+            if (t.isAtrasada()) {
+                System.out.println("   ⚠️ ATRASADA!");
+            }
+            
+            System.out.println("   " + "-".repeat(40));
+        }
+
+        System.out.println("\n🔍 FORMAS DE SELECIONAR:");
+        System.out.println("• Digite o NÚMERO da tarefa (1, 2, 3...)");
+        System.out.println("• Digite parte do NOME da tarefa");
+        System.out.println("• Digite os primeiros caracteres do ID");
+
+        String busca = ConsoleUtils.lerString("Selecione a tarefa: ");
+        
+        if (busca.trim().isEmpty()) {
+            ConsoleUtils.mostrarMensagemErro("Seleção não pode ser vazia!");
+            return null;
+        }
+
+        return encontrarTarefa(busca.trim(), tarefas);
+    }
+
+    // NOVO MÉTODO: Busca inteligente de tarefa
+    private Task encontrarTarefa(String busca, List<Task> tarefas) {
+        // 1. Busca por número
+        try {
+            int numero = Integer.parseInt(busca);
+            if (numero >= 1 && numero <= tarefas.size()) {
+                return tarefas.get(numero - 1);
+            }
+        } catch (NumberFormatException e) {
+            // Continuar
+        }
+
+        // 2. Busca por ID (primeiros caracteres)
+        for (Task t : tarefas) {
+            if (t.getId().toLowerCase().startsWith(busca.toLowerCase())) {
+                return t;
+            }
+        }
+
+        // 3. Busca por nome (contém)
+        List<Task> encontradas = new java.util.ArrayList<>();
+        for (Task t : tarefas) {
+            if (t.getNome().toLowerCase().contains(busca.toLowerCase())) {
+                encontradas.add(t);
+            }
+        }
+
+        if (encontradas.isEmpty()) {
+            System.out.println("❌ Tarefa não encontrada!");
+            System.out.println("💡 Dicas:");
+            System.out.println("   • Use o número da lista (ex: 1, 2, 3...)");
+            System.out.println("   • Digite parte do nome (ex: 'sistema', 'bug')");
+            System.out.println("   • Use os primeiros 8 caracteres do ID");
+            return null;
+        }
+
+        if (encontradas.size() == 1) {
+            return encontradas.get(0);
+        }
+
+        // Múltiplos resultados
+        System.out.println("\n🔍 Encontradas " + encontradas.size() + " tarefas:");
+        for (int i = 0; i < encontradas.size(); i++) {
+            System.out.printf("%d. %s [%s]\n", 
+                    (i + 1), 
+                    encontradas.get(i).getNome(),
+                    encontradas.get(i).getId().substring(0, 8));
+        }
+        
+        int escolha = ConsoleUtils.lerInt("Qual tarefa deseja? (1-" + encontradas.size() + "): ");
+        if (escolha >= 1 && escolha <= encontradas.size()) {
+            return encontradas.get(escolha - 1);
+        }
+
+        return null;
+    }
+
+    // NOVO MÉTODO: Seleção inteligente de usuário
+    private User selecionarUsuario() {
+        List<User> usuarios = userRepo.findAll();
+        if (usuarios.isEmpty()) {
+            ConsoleUtils.mostrarMensagemErro("❌ Nenhum usuário cadastrado!");
+            return null;
+        }
+
+        System.out.println("=== USUÁRIOS DISPONÍVEIS ===");
+        for (int i = 0; i < usuarios.size(); i++) {
+            User u = usuarios.get(i);
+            System.out.printf("%d. %s (%s)\n", (i + 1), u.getNomeCompleto(), u.getLogin());
+            System.out.printf("   ID: %s | Perfil: %s\n", 
+                    u.getId().substring(0, 8) + "...", u.getPerfil());
+            System.out.printf("   Email: %s | Cargo: %s\n", u.getEmail(), u.getCargo());
+            System.out.println("   " + "-".repeat(40));
+        }
+
+        System.out.println("\n🔍 FORMAS DE SELECIONAR:");
+        System.out.println("• Digite o NÚMERO do usuário (1, 2, 3...)");
+        System.out.println("• Digite parte do NOME do usuário");
+        System.out.println("• Digite o LOGIN do usuário");
+        System.out.println("• Digite os primeiros caracteres do ID");
+
+        String busca = ConsoleUtils.lerString("Selecione o usuário: ");
+        
+        if (busca.trim().isEmpty()) {
+            ConsoleUtils.mostrarMensagemErro("Seleção não pode ser vazia!");
+            return null;
+        }
+
+        return encontrarUsuario(busca.trim(), usuarios);
+    }
+
+    // NOVO MÉTODO: Busca inteligente de usuário
+    private User encontrarUsuario(String busca, List<User> usuarios) {
+        // 1. Busca por número
+        try {
+            int numero = Integer.parseInt(busca);
+            if (numero >= 1 && numero <= usuarios.size()) {
+                return usuarios.get(numero - 1);
+            }
+        } catch (NumberFormatException e) {
+            // Continuar
+        }
+
+        // 2. Busca por login (exato)
+        for (User u : usuarios) {
+            if (u.getLogin().equalsIgnoreCase(busca)) {
+                return u;
+            }
+        }
+
+        // 3. Busca por ID (primeiros caracteres)
+        for (User u : usuarios) {
+            if (u.getId().toLowerCase().startsWith(busca.toLowerCase())) {
+                return u;
+            }
+        }
+
+        // 4. Busca por nome (contém)
+        List<User> encontrados = new java.util.ArrayList<>();
+        for (User u : usuarios) {
+            if (u.getNomeCompleto().toLowerCase().contains(busca.toLowerCase())) {
+                encontrados.add(u);
+            }
+        }
+
+        if (encontrados.isEmpty()) {
+            System.out.println("❌ Usuário não encontrado!");
+            System.out.println("💡 Dicas:");
+            System.out.println("   • Use o número da lista (ex: 1, 2, 3...)");
+            System.out.println("   • Digite o login exato");
+            System.out.println("   • Digite parte do nome");
+            return null;
+        }
+
+        if (encontrados.size() == 1) {
+            return encontrados.get(0);
+        }
+
+        // Múltiplos resultados
+        System.out.println("\n🔍 Encontrados " + encontrados.size() + " usuários:");
+        for (int i = 0; i < encontrados.size(); i++) {
+            User u = encontrados.get(i);
+            System.out.printf("%d. %s (%s) [%s]\n", 
+                    (i + 1), 
+                    u.getNomeCompleto(),
+                    u.getLogin(),
+                    u.getId().substring(0, 8));
+        }
+        
+        int escolha = ConsoleUtils.lerInt("Qual usuário deseja? (1-" + encontrados.size() + "): ");
+        if (escolha >= 1 && escolha <= encontrados.size()) {
+            return encontrados.get(escolha - 1);
+        }
+
+        return null;
+    }
+
     // MÉTODO ATUALIZADO: Criar tarefa com seleção inteligente
     private void criarTarefa() {
         ConsoleUtils.mostrarTitulo("CRIAR NOVA TAREFA");
@@ -275,29 +481,48 @@ public class TaskView {
         }
     }
 
+    // MÉTODO ATUALIZADO: Editar tarefa com seleção inteligente
     private void editarTarefa() {
         ConsoleUtils.mostrarTitulo("EDITAR TAREFA");
 
-        String id = ConsoleUtils.lerString("ID da tarefa: ");
-        Optional<Task> opt = taskRepo.findById(id);
-
-        if (opt.isEmpty()) {
-            ConsoleUtils.mostrarMensagemErro("Tarefa não encontrada!");
+        Task tarefa = selecionarTarefa();
+        if (tarefa == null) {
+            ConsoleUtils.mostrarMensagemErro("Operação cancelada!");
             return;
         }
 
-        Task tarefa = opt.get();
-        String novoNome = ConsoleUtils.lerString("Novo nome (" + tarefa.getNome() + "): ");
-        String novaDescricao = ConsoleUtils.lerString("Nova descrição (" + tarefa.getDescricao() + "): ");
+        // Confirmar tarefa selecionada
+        System.out.println("\n✅ TAREFA SELECIONADA:");
+        System.out.println("Nome: " + tarefa.getNome());
+        System.out.println("Descrição: " + tarefa.getDescricao());
+        System.out.println("ID: " + tarefa.getId().substring(0, 8) + "...");
+        System.out.println("Status: " + tarefa.getStatus());
+        
+        String confirmacao = ConsoleUtils.lerString("Confirma esta tarefa? (s/n): ");
+        if (!confirmacao.equalsIgnoreCase("s")) {
+            System.out.println("Operação cancelada.");
+            return;
+        }
 
-        if (!novoNome.isEmpty()) tarefa.setNome(novoNome);
-        if (!novaDescricao.isEmpty()) tarefa.setDescricao(novaDescricao);
+        String novoNome = ConsoleUtils.lerString("Novo nome (deixe vazio para manter): ");
+        String novaDescricao = ConsoleUtils.lerString("Nova descrição (deixe vazio para manter): ");
+
+        if (!novoNome.trim().isEmpty()) {
+            tarefa.setNome(novoNome);
+            System.out.println("✓ Nome atualizado!");
+        }
+        
+        if (!novaDescricao.trim().isEmpty()) {
+            tarefa.setDescricao(novaDescricao);
+            System.out.println("✓ Descrição atualizada!");
+        }
 
         String alterarPrazo = ConsoleUtils.lerString("Alterar prazo? (s/n): ");
         if (alterarPrazo.equalsIgnoreCase("s")) {
             LocalDate novoPrazo = DateUtils.lerData("Novo prazo");
             if (novoPrazo != null) {
                 tarefa.setPrazo(novoPrazo);
+                System.out.println("✓ Prazo atualizado!");
             }
         }
 
@@ -307,29 +532,26 @@ public class TaskView {
             
             if (authService.getCurrentUser() != null) {
                 logService.log(authService.getCurrentUser().getId(), "EDIT_TASK", 
-                              tarefa.getId(), "Tarefa editada");
+                              tarefa.getId(), "Tarefa editada: " + tarefa.getNome());
             }
             
-            ConsoleUtils.mostrarMensagemSucesso("Tarefa atualizada!");
+            ConsoleUtils.mostrarMensagemSucesso("✅ Tarefa atualizada com sucesso!");
         } catch (Exception e) {
             ConsoleUtils.mostrarMensagemErro("Erro ao atualizar: " + e.getMessage());
         }
     }
 
+    // MÉTODO ATUALIZADO: Alterar status com seleção inteligente
     private void alterarStatus() {
         ConsoleUtils.mostrarTitulo("ALTERAR STATUS DA TAREFA");
 
-        String id = ConsoleUtils.lerString("ID da tarefa: ");
-        Optional<Task> opt = taskRepo.findById(id);
-
-        if (opt.isEmpty()) {
-            ConsoleUtils.mostrarMensagemErro("Tarefa não encontrada!");
+        Task tarefa = selecionarTarefa();
+        if (tarefa == null) {
+            ConsoleUtils.mostrarMensagemErro("Operação cancelada!");
             return;
         }
 
-        Task tarefa = opt.get();
-
-        System.out.println("Status atual: " + tarefa.getStatus());
+        System.out.println("\n📊 STATUS ATUAL: " + tarefa.getStatus());
         System.out.println("\nStatus disponíveis:");
         TaskStatus[] statuses = TaskStatus.values();
         for (int i = 0; i < statuses.length; i++) {
@@ -348,93 +570,140 @@ public class TaskView {
                               tarefa.getId(), "Status alterado para " + novoStatus);
             }
 
-            ConsoleUtils.mostrarMensagemSucesso("Status atualizado para: " + novoStatus);
+            ConsoleUtils.mostrarMensagemSucesso("✅ Status atualizado para: " + novoStatus);
         } else {
             ConsoleUtils.mostrarMensagemErro("Opção inválida!");
         }
     }
 
+    // MÉTODO ATUALIZADO: Atribuir usuário com seleção inteligente
     private void atribuirUsuario() {
         ConsoleUtils.mostrarTitulo("ATRIBUIR USUÁRIO A UMA TAREFA");
 
-        String idTarefa = ConsoleUtils.lerString("ID da tarefa: ");
-        Optional<Task> opt = taskRepo.findById(idTarefa);
-
-        if (opt.isEmpty()) {
-            ConsoleUtils.mostrarMensagemErro("Tarefa não encontrada!");
+        // Seleção inteligente de tarefa
+        Task tarefa = selecionarTarefa();
+        if (tarefa == null) {
+            ConsoleUtils.mostrarMensagemErro("Operação cancelada!");
             return;
         }
 
-        Task tarefa = opt.get();
-
-        String idUsuario = ConsoleUtils.lerString("ID do usuário: ");
-        if (userRepo.findById(idUsuario).isEmpty()) {
-            ConsoleUtils.mostrarMensagemErro("Usuário não encontrado!");
+        // Confirmar tarefa
+        System.out.println("\n✅ TAREFA SELECIONADA:");
+        System.out.println("Nome: " + tarefa.getNome());
+        System.out.println("Status: " + tarefa.getStatus());
+        System.out.println("ID: " + tarefa.getId().substring(0, 8) + "...");
+        
+        String confirmacao = ConsoleUtils.lerString("Confirma esta tarefa? (s/n): ");
+        if (!confirmacao.equalsIgnoreCase("s")) {
+            System.out.println("Operação cancelada.");
             return;
         }
 
-        if (tarefa.assignToUser(idUsuario)) {
+        // Seleção inteligente de usuário
+        User usuario = selecionarUsuario();
+        if (usuario == null) {
+            ConsoleUtils.mostrarMensagemErro("Operação cancelada!");
+            return;
+        }
+
+        // Confirmar usuário
+        System.out.println("\n👤 USUÁRIO SELECIONADO:");
+        System.out.println("Nome: " + usuario.getNomeCompleto());
+        System.out.println("Login: " + usuario.getLogin());
+        System.out.println("Cargo: " + usuario.getCargo());
+        System.out.println("ID: " + usuario.getId().substring(0, 8) + "...");
+        
+        String confirmacaoUsuario = ConsoleUtils.lerString("Confirma este usuário? (s/n): ");
+        if (!confirmacaoUsuario.equalsIgnoreCase("s")) {
+            System.out.println("Operação cancelada.");
+            return;
+        }
+
+        // Atribuir usuário
+        if (tarefa.assignToUser(usuario.getId())) {
             taskRepo.save(tarefa);
             
             if (authService.getCurrentUser() != null) {
                 logService.log(authService.getCurrentUser().getId(), "ASSIGN_USER", 
-                              tarefa.getId(), "Usuário atribuído: " + idUsuario);
+                              tarefa.getId(), "Usuário atribuído: " + usuario.getNomeCompleto());
             }
             
-            ConsoleUtils.mostrarMensagemSucesso("Usuário atribuído à tarefa!");
+            ConsoleUtils.mostrarMensagemSucesso("✅ Usuário atribuído à tarefa com sucesso!");
+            System.out.println("📋 RESUMO:");
+            System.out.println("Tarefa: " + tarefa.getNome());
+            System.out.println("Usuário: " + usuario.getNomeCompleto() + " (" + usuario.getLogin() + ")");
         } else {
-            ConsoleUtils.mostrarMensagemErro("Não é possível atribuir usuário. Tarefa deve estar PENDENTE.");
+            ConsoleUtils.mostrarMensagemErro("❌ Não é possível atribuir usuário.");
+            System.out.println("💡 A tarefa deve estar com status PENDENTE para atribuição.");
         }
     }
 
+    // MÉTODO ATUALIZADO: Excluir tarefa com seleção inteligente
     private void excluirTarefa() {
         ConsoleUtils.mostrarTitulo("EXCLUIR TAREFA");
 
-        String id = ConsoleUtils.lerString("ID da tarefa: ");
-        Optional<Task> opt = taskRepo.findById(id);
-
-        if (opt.isEmpty()) {
-            ConsoleUtils.mostrarMensagemErro("Tarefa não encontrada!");
+        Task tarefa = selecionarTarefa();
+        if (tarefa == null) {
+            ConsoleUtils.mostrarMensagemErro("Operação cancelada!");
             return;
         }
 
-        Task tarefa = opt.get();
-        String confirmacao = ConsoleUtils.lerString("Confirma exclusão da tarefa '" + tarefa.getNome() + "'? (s/n): ");
+        // Mostrar detalhes da tarefa
+        System.out.println("\n🗑️ TAREFA A SER EXCLUÍDA:");
+        System.out.println("Nome: " + tarefa.getNome());
+        System.out.println("Status: " + tarefa.getStatus());
+        System.out.println("ID: " + tarefa.getId().substring(0, 8) + "...");
+
+        String confirmacao = ConsoleUtils.lerString("⚠️ CONFIRMA EXCLUSÃO da tarefa '" + 
+                                                   tarefa.getNome() + "'? (s/n): ");
         
         if (confirmacao.equalsIgnoreCase("s")) {
             taskRepo.delete(tarefa.getId());
             
             if (authService.getCurrentUser() != null) {
                 logService.log(authService.getCurrentUser().getId(), "DELETE_TASK", 
-                              tarefa.getId(), "Tarefa excluída");
+                              tarefa.getId(), "Tarefa excluída: " + tarefa.getNome());
             }
             
-            ConsoleUtils.mostrarMensagemSucesso("Tarefa removida com sucesso!");
+            ConsoleUtils.mostrarMensagemSucesso("✅ Tarefa removida com sucesso!");
         } else {
-            ConsoleUtils.mostrarMensagemSucesso("Exclusão cancelada.");
+            ConsoleUtils.mostrarMensagemSucesso("❌ Exclusão cancelada.");
         }
     }
 
+    // MÉTODO ATUALIZADO: Marcar como concluída com seleção inteligente
     private void marcarComoConcluida() {
         ConsoleUtils.mostrarTitulo("MARCAR TAREFA COMO CONCLUÍDA");
 
-        String id = ConsoleUtils.lerString("ID da tarefa: ");
-        Optional<Task> opt = taskRepo.findById(id);
-
-        if (opt.isEmpty()) {
-            ConsoleUtils.mostrarMensagemErro("Tarefa não encontrada!");
+        Task tarefa = selecionarTarefa();
+        if (tarefa == null) {
+            ConsoleUtils.mostrarMensagemErro("Operação cancelada!");
             return;
         }
 
-        Task tarefa = opt.get();
+        // Mostrar detalhes da tarefa
+        System.out.println("\n✅ TAREFA SELECIONADA:");
+        System.out.println("Nome: " + tarefa.getNome());
+        System.out.println("Status atual: " + tarefa.getStatus());
+        System.out.println("ID: " + tarefa.getId().substring(0, 8) + "...");
+
+        String confirmacao = ConsoleUtils.lerString("Confirma conclusão desta tarefa? (s/n): ");
+        if (!confirmacao.equalsIgnoreCase("s")) {
+            System.out.println("Operação cancelada.");
+            return;
+        }
+
         String userId = authService.getCurrentUser().getId();
         
         if (tarefa.markAsCompleted(userId)) {
             taskRepo.save(tarefa);
-            logService.log(userId, "COMPLETE_TASK", tarefa.getId(), "Tarefa concluída");
-            ConsoleUtils.mostrarMensagemSucesso("Tarefa marcada como concluída!");
+            logService.log(userId, "COMPLETE_TASK", tarefa.getId(), 
+                          "Tarefa concluída: " + tarefa.getNome());
+            ConsoleUtils.mostrarMensagemSucesso("✅ Tarefa marcada como concluída!");
+            System.out.println("📋 Status atualizado para: " + tarefa.getStatus());
         } else {
-            ConsoleUtils.mostrarMensagemErro("Não é possível concluir. Tarefa deve estar EM_ANDAMENTO.");
+            ConsoleUtils.mostrarMensagemErro("❌ Não é possível concluir esta tarefa.");
+            System.out.println("💡 A tarefa deve estar EM_ANDAMENTO para ser concluída.");
         }
     }
 }
