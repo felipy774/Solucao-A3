@@ -1,19 +1,22 @@
 package com.ProjectManager.view;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.Scanner;
 import com.ProjectManager.model.User;
 import com.ProjectManager.model.UserProfile;
 import com.ProjectManager.repository.UserRepository;
 import com.ProjectManager.service.AuthenticationService;
 
-import java.util.Optional;
-
 public class UserView {
     private UserRepository userRepository;
     private AuthenticationService authService;
+    private Scanner scanner;
 
     public UserView() {
         this.userRepository = UserRepository.getInstance();
         this.authService = AuthenticationService.getInstance();
+        this.scanner = new Scanner(System.in);
     }
 
     public void mostrarMenu() {
@@ -28,7 +31,7 @@ public class UserView {
             System.out.println("0. ⬅️  Voltar");
             System.out.println();
 
-            int opcao = ConsoleUtils.lerInt("Escolha uma opção: ");
+            int opcao = lerInt("Escolha uma opção: ");
 
             switch (opcao) {
                 case 1:
@@ -47,12 +50,13 @@ public class UserView {
                     voltar = true;
                     break;
                 default:
-                    ConsoleUtils.mostrarMensagemErro("Opção inválida!");
+                    System.out.println("Opção inválida! Tente novamente.");
             }
 
             if (!voltar) {
-                ConsoleUtils.pausar();
-                ConsoleUtils.limparTela();
+                System.out.println("\nPressione Enter para continuar...");
+                scanner.nextLine();
+                limparTela();
             }
         }
     }
@@ -60,82 +64,128 @@ public class UserView {
     public void cadastrarUsuario() {
         ConsoleUtils.mostrarTitulo("CADASTRO DE USUÁRIO");
 
-        String nome = ConsoleUtils.lerTexto("Nome completo: ");
-        String cpf = ConsoleUtils.lerTexto("CPF: ");
-        String email = ConsoleUtils.lerTexto("E-mail: ");
-        String cargo = ConsoleUtils.lerTexto("Cargo: ");
-        String login = ConsoleUtils.lerTexto("Login: ");
-        String senha = ConsoleUtils.lerTexto("Senha: ");
+        System.out.print("Nome completo: ");
+        String nome = scanner.nextLine();
+        
+        System.out.print("CPF: ");
+        String cpf = scanner.nextLine();
+        
+        System.out.print("E-mail: ");
+        String email = scanner.nextLine();
+        
+        System.out.print("Cargo: ");
+        String cargo = scanner.nextLine();
+        
+        System.out.print("Login: ");
+        String login = scanner.nextLine();
+        
+        System.out.print("Senha: ");
+        String senha = scanner.nextLine();
 
-        System.out.println("Perfis disponíveis: ");
-        for (UserProfile profile : UserProfile.values()) {
-            System.out.println("- " + profile.name() + " (" + profile.getDisplayName() + ")");
+        System.out.println("\nPerfis disponíveis:");
+        UserProfile[] perfis = UserProfile.values();
+        for (int i = 0; i < perfis.length; i++) {
+            System.out.println((i + 1) + ". " + perfis[i].name() + " - " + perfis[i].getDisplayName());
         }
 
-        UserProfile perfil = null;
-        while (perfil == null) {
-            String perfilStr = ConsoleUtils.lerTexto("Perfil: ").toUpperCase();
-            for (UserProfile p : UserProfile.values()) {
-                if (p.name().equals(perfilStr)) {
-                    perfil = p;
-                    break;
-                }
+        int opcaoPerfil = 0;
+        boolean perfilValido = false;
+        
+        while (!perfilValido) {
+            opcaoPerfil = lerInt("Escolha um perfil (1-" + perfis.length + "): ");
+            
+            if (opcaoPerfil >= 1 && opcaoPerfil <= perfis.length) {
+                perfilValido = true;
+            } else {
+                System.out.println("Opção inválida! Tente novamente.");
             }
         }
 
-        User user = new User(nome, cpf, email, cargo, login, senha, perfil);
-        userRepository.save(user);
+        UserProfile perfil = perfis[opcaoPerfil - 1];
 
-        ConsoleUtils.mostrarMensagemSucesso("Usuário cadastrado com sucesso!");
+        try {
+            User user = new User(nome, cpf, email, cargo, login, senha, perfil);
+            userRepository.save(user);
+            ConsoleUtils.mostrarMensagemSucesso("Usuário cadastrado com sucesso!");
+            System.out.println("Perfil selecionado: " + perfil.getDisplayName());
+        } catch (Exception e) {
+            System.out.println("Erro ao cadastrar usuário: " + e.getMessage());
+        }
     }
 
     public void listarUsuarios() {
         ConsoleUtils.mostrarTitulo("LISTA DE USUÁRIOS");
 
-        for (User u : userRepository.findAll()) {
-            System.out.println(u);
+        List<User> usuarios = userRepository.findAll();
+        if (usuarios.isEmpty()) {
+            System.out.println("Nenhum usuário cadastrado.");
+            return;
+        }
+
+        for (User u : usuarios) {
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println("Nome: " + u.getNomeCompleto());
+            System.out.println("CPF: " + u.getCpf());
+            System.out.println("Email: " + u.getEmail());
+            System.out.println("Login: " + u.getLogin());
+            System.out.println("Perfil: " + u.getPerfil().getDisplayName());
+            System.out.println("Status: " + (u.isAtivo() ? "Ativo" : "Inativo"));
+            System.out.println();
         }
     }
 
     public void buscarUsuarioPorCpf() {
         ConsoleUtils.mostrarTitulo("BUSCAR USUÁRIO POR CPF");
 
-        String cpf = ConsoleUtils.lerTexto("Digite o CPF: ");
+        System.out.print("Digite o CPF: ");
+        String cpf = scanner.nextLine();
+        
         Optional<User> userOpt = userRepository.findByCpf(cpf);
-        User user = userOpt.orElse(null);
-
-        if (user != null) {
-            System.out.println(user);
+        
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println("Nome: " + user.getNomeCompleto());
+            System.out.println("CPF: " + user.getCpf());
+            System.out.println("Email: " + user.getEmail());
+            System.out.println("Login: " + user.getLogin());
+            System.out.println("Perfil: " + user.getPerfil().getDisplayName());
+            System.out.println("Status: " + (user.isAtivo() ? "Ativo" : "Inativo"));
         } else {
-            ConsoleUtils.mostrarMensagemErro("Usuário não encontrado!");
+            System.out.println("Usuário não encontrado!");
         }
     }
 
     public void removerUsuario() {
         ConsoleUtils.mostrarTitulo("REMOVER USUÁRIO");
 
-        String cpf = ConsoleUtils.lerTexto("Digite o CPF do usuário a remover: ");
+        System.out.print("Digite o CPF do usuário a remover: ");
+        String cpf = scanner.nextLine();
+        
         Optional<User> userOpt = userRepository.findByCpf(cpf);
-        User user = userOpt.orElse(null);
-
-        if (user != null) {
+        
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
             userRepository.delete(user);
             ConsoleUtils.mostrarMensagemSucesso("Usuário removido com sucesso!");
         } else {
-            ConsoleUtils.mostrarMensagemErro("Usuário não encontrado!");
+            System.out.println("Usuário não encontrado!");
         }
     }
 
     public void fazerLogin() {
         ConsoleUtils.mostrarTitulo("LOGIN DE USUÁRIO");
 
-        String login = ConsoleUtils.lerTexto("Login: ");
-        String senha = ConsoleUtils.lerTexto("Senha: ");
+        System.out.print("Login: ");
+        String login = scanner.nextLine();
+        
+        System.out.print("Senha: ");
+        String senha = scanner.nextLine();
 
         if (authService.login(login, senha)) {
             ConsoleUtils.mostrarMensagemSucesso("Login realizado com sucesso!");
         } else {
-            ConsoleUtils.mostrarMensagemErro("Login ou senha inválidos!");
+            System.out.println("Login ou senha inválidos!");
         }
     }
 
@@ -152,6 +202,40 @@ public class UserView {
             );
             userRepository.save(admin);
             ConsoleUtils.mostrarMensagemSucesso("Usuário administrador padrão criado!");
+        }
+    }
+
+    // Métodos auxiliares
+    private int lerInt(String prompt) {
+        int valor = 0;
+        boolean valido = false;
+        
+        while (!valido) {
+            try {
+                System.out.print(prompt);
+                String input = scanner.nextLine();
+                valor = Integer.parseInt(input);
+                valido = true;
+            } catch (NumberFormatException e) {
+                System.out.println("Por favor, digite um número válido!");
+            }
+        }
+        
+        return valor;
+    }
+
+    private void limparTela() {
+        try {
+            if (System.getProperty("os.name").contains("Windows")) {
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+            } else {
+                System.out.print("\033[2J\033[H");
+            }
+        } catch (Exception e) {
+            // Se não conseguir limpar, apenas pula linhas
+            for (int i = 0; i < 50; i++) {
+                System.out.println();
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.ProjectManager.model;
 
+import com.ProjectManager.util.DateUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ public class Project {
     private LocalDateTime dataInicio;
     private LocalDateTime dataFim;
     private List<String> taskIds;
+    private String gerenteId; // Adicionar este campo
 
     public Project(String nome, String descricao) {
         this.id = java.util.UUID.randomUUID().toString();
@@ -24,25 +26,45 @@ public class Project {
         this.taskIds = new ArrayList<>();
     }
 
+    public Project(String nome, String descricao, LocalDate prazo) {
+        this.id = java.util.UUID.randomUUID().toString();
+        this.nome = nome;
+        this.descricao = descricao;
+        this.prazo = prazo;
+        this.status = ProjectStatus.PLANEJADO;
+        this.dataInicio = LocalDateTime.now();
+        this.taskIds = new ArrayList<>();
+    }
+
+    // NOVO CONSTRUTOR - Adicionar este para o ProjectRepository
+    public Project(String nome, String descricao, LocalDate prazo, String gerenteId) {
+        this.id = java.util.UUID.randomUUID().toString();
+        this.nome = nome;
+        this.descricao = descricao;
+        this.prazo = prazo;
+        this.gerenteId = gerenteId;
+        this.status = ProjectStatus.PLANEJADO;
+        this.dataInicio = LocalDateTime.now();
+        this.taskIds = new ArrayList<>();
+    }
+
     public void setDescricao(String descricao) {
-    this.descricao = descricao;
-}
+        this.descricao = descricao;
+    }
 
     public void setNome(String nome) {
-    this.nome = nome;
-}
+        this.nome = nome;
+    }
 
-    public Project(String nome, String descricao, LocalDate prazo) {
-    this.nome = nome;
-    this.descricao = descricao;
-    this.prazo = prazo;
-}
+    public void addTask(String taskId) { 
+        taskIds.add(taskId); 
+    }
 
-    public void addTask(String taskId) { taskIds.add(taskId); }
+    public boolean isCanceled() { 
+        return status == ProjectStatus.CANCELADO; 
+    }
 
-    public boolean isCanceled() { return status == ProjectStatus.CANCELADO; }
-
-    // Getters e Setters
+    // Getters e Setters existentes
     public String getId() { return id; }
     public String getNome() { return nome; }
     public String getDescricao() { return descricao; }
@@ -52,4 +74,25 @@ public class Project {
     public LocalDateTime getDataFim() { return dataFim; }
     public void setDataFim(LocalDateTime dataFim) { this.dataFim = dataFim; }
     public List<String> getTaskIds() { return taskIds; }
+
+    // NOVOS GETTERS/SETTERS - Adicionar estes
+    public LocalDate getPrazo() { 
+        return prazo; 
+    }
+    
+    public void setPrazo(LocalDate prazo) { 
+        this.prazo = prazo; 
+    }
+    
+    public String getGerenteId() { 
+        return gerenteId; 
+    }
+    
+    public void setGerenteId(String gerenteId) { 
+        this.gerenteId = gerenteId; 
+    }
+
+    public void setId(String id) { 
+        this.id = id; 
+    }
 }

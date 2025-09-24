@@ -1,0 +1,2 @@
+b395108f-3383-45bb-82a7-bf7117deaaaa;Administrador do Sistema;00000000000;admin@sistema.com;Administrador;admin;admin123;ADMINISTRADOR;true
+1bcb81b0-ed96-478a-a01e-1a2c5d897a57;Antonio Felipe;000000000/00;Felipy774@gmail.com;Criador;Antonio;123456;ADMINISTRADOR;true
